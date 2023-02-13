@@ -13,7 +13,6 @@ resource "aws_apprunner_auto_scaling_configuration_version" "aws-deploy" {
   max_size                        = 2
 }
 
-
 resource "aws_apprunner_service" "aws-deploy" {
   service_name                   = local.project_name
   auto_scaling_configuration_arn = aws_apprunner_auto_scaling_configuration_version.aws-deploy.arn

@@ -11,12 +11,11 @@ resource "aws_iam_role_policy" "aws-deploy-role-policy" {
 data "aws_iam_policy_document" "aws-deploy-policy" {
   statement {
     effect    = "Allow"
-    resources = ["*"]
-
     actions = [
       "ecr:Get*",
       "ecr:List*",
     ]
+    resources = ["*"]
   }
 }
 
