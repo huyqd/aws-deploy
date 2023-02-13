@@ -256,3 +256,5 @@ cython_debug/
 .terraform
 .tfstate
 .terraform.locl.hcl
+
+assets
