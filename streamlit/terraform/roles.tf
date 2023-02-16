@@ -37,8 +37,11 @@ data "aws_iam_policy_document" "aws-deploy-assume-policy" {
     actions = ["sts:AssumeRole"]
 
     principals {
-      type        = "Service"
-      identifiers = ["ecs.amazonaws.com"]
+      type = "Service"
+      identifiers = [
+        "ecs.amazonaws.com",
+        "ecs-tasks.amazonaws.com",
+      ]
     }
   }
 }

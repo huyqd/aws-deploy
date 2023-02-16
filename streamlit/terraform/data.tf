@@ -5,6 +5,9 @@ resource "aws_ecs_task_definition" "streamlit" {
   family             = local.service_name
   execution_role_arn = aws_iam_role.aws-deploy-ecs-execution-role.arn
   task_role_arn      = aws_iam_role.aws-deploy.arn
+  cpu                = "256"
+  memory             = "1024"
+
   container_definitions = jsonencode([
     {
       name      = local.service_name
