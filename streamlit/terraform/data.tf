@@ -21,6 +21,7 @@ resource "aws_ecs_task_definition" "streamlit" {
         {
           containerPort = 8501
           hostPort      = 8501
+          protocol      = "tcp"
         }
       ]
       logConfiguration = {
