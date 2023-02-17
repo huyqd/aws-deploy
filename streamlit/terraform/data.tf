@@ -2,11 +2,13 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 resource "aws_ecs_task_definition" "streamlit" {
-  family             = local.service_name
-  execution_role_arn = aws_iam_role.aws-deploy-ecs-execution-role.arn
-  task_role_arn      = aws_iam_role.aws-deploy.arn
-  cpu                = "256"
-  memory             = "1024"
+  family                   = local.service_name
+  execution_role_arn       = aws_iam_role.aws-deploy-ecs-execution-role.arn
+  task_role_arn            = aws_iam_role.aws-deploy.arn
+  cpu                      = "256"
+  memory                   = "1024"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
 
   container_definitions = jsonencode([
     {
@@ -17,8 +19,8 @@ resource "aws_ecs_task_definition" "streamlit" {
       essential = true
       portMappings = [
         {
-          containerPort = 8051
-          hostPort      = 8051
+          containerPort = 8501
+          hostPort      = 8501
         }
       ]
       logConfiguration = {

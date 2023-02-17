@@ -7,15 +7,18 @@ resource "aws_ecs_service" "streamlit" {
   cluster         = aws_ecs_cluster.aws-deploy.id
   task_definition = aws_ecs_task_definition.streamlit.arn
   desired_count   = 1
+  launch_type     = "FARGATE"
 
   load_balancer {
     target_group_arn = aws_lb_target_group.aws-deploy.arn
     container_name   = local.service_name
-    container_port   = aws_lb_target_group.aws-deploy.port
+    container_port   = 8501
   }
 
-  lifecycle {
-    ignore_changes = [desired_count, load_balancer]
+  network_configuration {
+    subnets          = local.public_subnets
+    assign_public_ip = true
+    #    security_groups = [aws_security_group.service-sg.id]
   }
 
 }
@@ -25,9 +28,7 @@ resource "aws_lb" "aws-deploy" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.aws-deploy.id]
-  subnets            = [aws_subnet.public-subnet-1.id, aws_subnet.public-subnet-2.id]
-
-  enable_deletion_protection = true
+  subnets            = local.public_subnets
 
   tags = {
     Environment = local.environment
@@ -39,8 +40,12 @@ resource "aws_lb_target_group" "aws-deploy" {
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.app_vpc.id
-  target_type = "instance"
+  target_type = "ip"
 
+  health_check {
+    matcher = "200-299"
+    path    = "/"
+  }
 }
 
 #resource "aws_lb_listener" "https" {
@@ -65,4 +70,13 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.aws-deploy.arn
   }
+}
+
+resource "aws_cloudwatch_log_group" "streamlit-lg" {
+  name = "${local.service_name}-${local.environment}"
+}
+
+resource "aws_cloudwatch_log_stream" "streamlit-lg-stream" {
+  log_group_name = "${local.service_name}-${local.environment}"
+  name           = "${local.service_name}-${local.environment}"
 }
