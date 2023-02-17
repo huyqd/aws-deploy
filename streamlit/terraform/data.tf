@@ -13,7 +13,7 @@ resource "aws_ecs_task_definition" "streamlit" {
   container_definitions = jsonencode([
     {
       name      = local.service_name
-      image     = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${aws_ecr_repository.aws-deploy.name}:${local.service_name}"
+      image     = "${aws_ecr_repository.aws-deploy.repository_url}:${local.service_name}"
       cpu       = 256
       memory    = 1024
       essential = true
