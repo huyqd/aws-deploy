@@ -24,6 +24,35 @@ resource "aws_security_group" "aws-deploy" {
   }
 }
 
+resource "aws_security_group" "service-sg" {
+  name   = "service-sg"
+  vpc_id = aws_vpc.app_vpc.id
+
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    # Only allowing traffic in from the load balancer security group
+    security_groups = [aws_security_group.aws-deploy.id]
+  }
+
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    # Only allowing traffic in from the load balancer security group
+    security_groups = [aws_security_group.aws-deploy.id]
+  }
+
+
+  egress {
+    from_port   = 0             # Allowing any incoming port
+    to_port     = 0             # Allowing any outgoing port
+    protocol    = "-1"          # Allowing any outgoing protocol
+    cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
+  }
+}
+
 #resource "aws_eip" "public" {
 #  vpc      = true
 #  instance = aws_instance.aws-deploy.id
@@ -49,7 +78,6 @@ resource "aws_subnet" "public-subnet-1" {
   vpc_id                  = aws_vpc.app_vpc.id
   cidr_block              = "10.1.1.0/24"
   availability_zone       = "eu-central-1a"
-  map_public_ip_on_launch = true
 
   tags = {
     Name = "public-subnet-1"
@@ -66,25 +94,25 @@ resource "aws_subnet" "public-subnet-2" {
   }
 }
 
-resource "aws_subnet" "private-subnet-1" {
-  vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = "10.1.3.0/24"
-  availability_zone = "eu-central-1a"
-
-  tags = {
-    Name = "private-subnet-1"
-  }
-}
-
-resource "aws_subnet" "private-subnet-2" {
-  vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = "10.1.4.0/24"
-  availability_zone = "eu-central-1b"
-
-  tags = {
-    Name = "private-subnet-2"
-  }
-}
+#resource "aws_subnet" "private-subnet-1" {
+#  vpc_id            = aws_vpc.app_vpc.id
+#  cidr_block        = "10.1.3.0/24"
+#  availability_zone = "eu-central-1a"
+#
+#  tags = {
+#    Name = "private-subnet-1"
+#  }
+#}
+#
+#resource "aws_subnet" "private-subnet-2" {
+#  vpc_id            = aws_vpc.app_vpc.id
+#  cidr_block        = "10.1.4.0/24"
+#  availability_zone = "eu-central-1b"
+#
+#  tags = {
+#    Name = "private-subnet-2"
+#  }
+#}
 
 resource "aws_route_table" "route_table_public" {
   vpc_id = aws_vpc.app_vpc.id

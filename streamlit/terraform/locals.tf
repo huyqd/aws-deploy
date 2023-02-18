@@ -4,4 +4,7 @@ locals {
   environment  = "playground"
   project_name = "aws-deploy"
   service_name = "streamlit"
+
+  public_subnets  = [aws_subnet.public-subnet-1.id, aws_subnet.public-subnet-2.id]
+#  private_subnets = [aws_subnet.private-subnet-1.id, aws_subnet.private-subnet-2.id]
 }
