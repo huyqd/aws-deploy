@@ -45,7 +45,7 @@ resource "aws_ecs_task_definition" "aws-deploy" {
   container_definitions = jsonencode([
     {
       name      = local.project_name
-      image     = "${aws_ecr_repository.aws-deploy.repository_url}:${local.project_name}"
+      image     = "${aws_ecr_repository.aws-deploy.repository_url}:${local.service_name}"
       cpu       = local.cpu
       memory    = local.memory
       essential = true

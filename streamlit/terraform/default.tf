@@ -2,6 +2,8 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
+  service_name = "streamlit"
+
   region       = data.aws_region.current.name
   account_id   = data.aws_caller_identity.current.account_id
   environment  = "playground"
@@ -17,6 +19,9 @@ locals {
   memory           = 1024
   healthcheck_path = "/_stcore/health"
   launch_type      = "FARGATE"
+
+  hosted_zone        = "app-${local.environment}.dev"
+  canonical_dns_name = "aws-deploy.app-${local.environment}.dev"
 }
 
 resource "aws_s3_bucket" "aws-deploy" {
