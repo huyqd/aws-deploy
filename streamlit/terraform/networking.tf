@@ -1,139 +1,70 @@
-resource "aws_security_group" "aws-deploy" {
-  name   = local.project_name
-  vpc_id = aws_vpc.app_vpc.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_vpc" "main" {
+  cidr_block           = local.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 }
 
-resource "aws_security_group" "service-sg" {
-  name   = "service-sg"
-  vpc_id = aws_vpc.app_vpc.id
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    # Only allowing traffic in from the load balancer security group
-    security_groups = [aws_security_group.aws-deploy.id]
-  }
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    # Only allowing traffic in from the load balancer security group
-    security_groups = [aws_security_group.aws-deploy.id]
-  }
-
-
-  egress {
-    from_port   = 0             # Allowing any incoming port
-    to_port     = 0             # Allowing any outgoing port
-    protocol    = "-1"          # Allowing any outgoing protocol
-    cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
-  }
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
 }
 
-#resource "aws_eip" "public" {
-#  vpc      = true
-#  instance = aws_instance.aws-deploy.id
-#}
-
-resource "aws_vpc" "app_vpc" {
-  cidr_block = "10.1.0.0/16"
-
-  tags = {
-    Name = "app-vpc"
-  }
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = element(local.private_subnet_cidr, count.index)
+  availability_zone = element(local.availability_zones, count.index)
+  count             = length(local.private_subnet_cidr)
 }
 
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.app_vpc.id
-
-  tags = {
-    Name = "gw"
-  }
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = element(local.public_subnets_cidr, count.index)
+  availability_zone       = element(local.availability_zones, count.index)
+  count                   = length(local.public_subnets_cidr)
+  map_public_ip_on_launch = true
 }
 
-resource "aws_subnet" "public-subnet-1" {
-  vpc_id                  = aws_vpc.app_vpc.id
-  cidr_block              = "10.1.1.0/24"
-  availability_zone       = "eu-central-1a"
-
-  tags = {
-    Name = "public-subnet-1"
-  }
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
 }
 
-resource "aws_subnet" "public-subnet-2" {
-  vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = "10.1.2.0/24"
-  availability_zone = "eu-central-1b"
-
-  tags = {
-    Name = "public-subnet-2"
-  }
+resource "aws_route" "public" {
+  route_table_id         = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.main.id
 }
 
-#resource "aws_subnet" "private-subnet-1" {
-#  vpc_id            = aws_vpc.app_vpc.id
-#  cidr_block        = "10.1.3.0/24"
-#  availability_zone = "eu-central-1a"
-#
-#  tags = {
-#    Name = "private-subnet-1"
-#  }
-#}
-#
-#resource "aws_subnet" "private-subnet-2" {
-#  vpc_id            = aws_vpc.app_vpc.id
-#  cidr_block        = "10.1.4.0/24"
-#  availability_zone = "eu-central-1b"
-#
-#  tags = {
-#    Name = "private-subnet-2"
-#  }
-#}
-
-resource "aws_route_table" "route_table_public" {
-  vpc_id = aws_vpc.app_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
-  }
-
-  tags = {
-    Name = "app-routetable-public"
-  }
+resource "aws_route_table_association" "public" {
+  count          = length(local.public_subnets_cidr)
+  subnet_id      = element(aws_subnet.public.*.id, count.index)
+  route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route_table_association" "public-subnet-1" {
-  subnet_id      = aws_subnet.public-subnet-1.id
-  route_table_id = aws_route_table.route_table_public.id
+resource "aws_eip" "nat" {
+  count = length(local.private_subnet_cidr)
+  vpc   = true
 }
 
-resource "aws_route_table_association" "public-subnet-2" {
-  subnet_id      = aws_subnet.public-subnet-2.id
-  route_table_id = aws_route_table.route_table_public.id
+resource "aws_nat_gateway" "main" {
+  count         = length(local.private_subnet_cidr)
+  allocation_id = element(aws_eip.nat.*.id, count.index)
+  subnet_id     = element(aws_subnet.public.*.id, count.index)
+  depends_on    = [aws_internet_gateway.main]
 }
 
+resource "aws_route_table" "private" {
+  count  = length(local.private_subnet_cidr)
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route" "private" {
+  count                  = length(compact(local.private_subnet_cidr))
+  route_table_id         = element(aws_route_table.private.*.id, count.index)
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = element(aws_nat_gateway.main.*.id, count.index)
+}
+
+resource "aws_route_table_association" "private" {
+  count          = length(local.private_subnet_cidr)
+  subnet_id      = element(aws_subnet.private.*.id, count.index)
+  route_table_id = element(aws_route_table.private.*.id, count.index)
+}

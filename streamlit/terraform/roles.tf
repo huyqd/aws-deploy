@@ -1,48 +1,76 @@
-resource "aws_iam_role" "aws-deploy" {
-  name               = local.project_name
-  assume_role_policy = data.aws_iam_policy_document.aws-deploy-assume-policy.json
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${local.service_name}-ecsTaskRole-"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
 }
 
-resource "aws_iam_role_policy" "aws-deploy-role-policy" {
-  policy = data.aws_iam_policy_document.aws-deploy-policy.json
-  role   = aws_iam_role.aws-deploy.id
+resource "aws_iam_policy" "dynamodb" {
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:CreateTable",
+                "dynamodb:UpdateTimeToLive",
+                "dynamodb:PutItem",
+                "dynamodb:DescribeTable",
+                "dynamodb:ListTables",
+                "dynamodb:DeleteItem",
+                "dynamodb:GetItem",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:UpdateItem",
+                "dynamodb:UpdateTable"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
 }
 
-# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
-resource "aws_iam_role" "aws-deploy-ecs-execution-role" {
-  name               = "${local.project_name}-ecs-execution-role"
-  assume_role_policy = data.aws_iam_policy_document.aws-deploy-assume-policy.json
+resource "aws_iam_role_policy_attachment" "ecs-task-role-policy-attachment" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.dynamodb.arn
 }
 
-resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole" {
-  role       = aws_iam_role.aws-deploy-ecs-execution-role.name
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "${local.service_name}-ecsTaskExecutionRole"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attachment" {
+  role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
-
-data "aws_iam_policy_document" "aws-deploy-policy" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "ecr:Get*",
-      "ecr:List*",
-    ]
-    resources = ["*"]
-  }
-}
-
-data "aws_iam_policy_document" "aws-deploy-assume-policy" {
-  statement {
-    sid     = ""
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type = "Service"
-      identifiers = [
-        "ecs.amazonaws.com",
-        "ecs-tasks.amazonaws.com",
-      ]
-    }
-  }
-}
-
