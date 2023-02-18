@@ -258,3 +258,7 @@ cython_debug/
 .terraform.locl.hcl
 
 assets
+
+__pycache__
+.DS_Store
+*.sqlite3
