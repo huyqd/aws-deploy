@@ -8,13 +8,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
 
-resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = element(local.private_subnet_cidr, count.index)
-  availability_zone = element(local.availability_zones, count.index)
-  count             = length(local.private_subnet_cidr)
-}
-
+########### Public Subnets ###############
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = element(local.public_subnets_cidr, count.index)
@@ -37,6 +31,15 @@ resource "aws_route_table_association" "public" {
   count          = length(local.public_subnets_cidr)
   subnet_id      = element(aws_subnet.public.*.id, count.index)
   route_table_id = aws_route_table.public.id
+}
+
+
+########### Private Subnets ###############
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = element(local.private_subnet_cidr, count.index)
+  availability_zone = element(local.availability_zones, count.index)
+  count             = length(local.private_subnet_cidr)
 }
 
 resource "aws_eip" "nat" {

@@ -1,27 +1,27 @@
-resource "aws_ecs_cluster" "main" {
+resource "aws_ecs_cluster" "aws-deploy" {
   name = local.project_name
 }
 
-resource "aws_ecs_service" "main" {
-  name                               = local.service_name
-  cluster                            = aws_ecs_cluster.main.id
-  task_definition                    = aws_ecs_task_definition.streamlit.arn
+resource "aws_ecs_service" "aws-deploy" {
+  name                               = local.project_name
+  cluster                            = aws_ecs_cluster.aws-deploy.id
+  task_definition                    = aws_ecs_task_definition.aws-deploy.arn
   desired_count                      = 1
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
   health_check_grace_period_seconds  = 60
-  launch_type                        = "FARGATE"
+  launch_type                        = local.launch_type
   scheduling_strategy                = "REPLICA"
 
   network_configuration {
-    security_groups  = [aws_security_group.streamlit.id]
+    security_groups  = [aws_security_group.service.id]
     subnets          = aws_subnet.private.*.id
     assign_public_ip = false
   }
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.main.arn
-    container_name   = local.service_name
+    target_group_arn = aws_alb_target_group.aws-deploy.arn
+    container_name   = local.project_name
     container_port   = local.container_port
   }
 
@@ -33,18 +33,18 @@ resource "aws_ecs_service" "main" {
   }
 }
 
-resource "aws_ecs_task_definition" "streamlit" {
-  family                   = local.service_name
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+resource "aws_ecs_task_definition" "aws-deploy" {
+  family                   = local.project_name
+  execution_role_arn       = aws_iam_role.ecs-task-execution-role.arn
+  task_role_arn            = aws_iam_role.service-role.arn
   cpu                      = tostring(local.cpu)
   memory                   = tostring(local.memory)
-  requires_compatibilities = ["FARGATE"]
+  requires_compatibilities = [local.launch_type]
   network_mode             = "awsvpc"
 
   container_definitions = jsonencode([
     {
-      name      = local.service_name
+      name      = local.project_name
       image     = "${aws_ecr_repository.aws-deploy.repository_url}:${local.service_name}"
       cpu       = local.cpu
       memory    = local.memory
@@ -59,9 +59,9 @@ resource "aws_ecs_task_definition" "streamlit" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = "${local.service_name}-${local.environment}"
+          awslogs-group         = "${local.project_name}-${local.environment}"
           awslogs-region        = local.region
-          awslogs-stream-prefix = "${local.service_name}-${local.environment}"
+          awslogs-stream-prefix = "${local.project_name}-${local.environment}"
         }
       }
 
@@ -69,12 +69,12 @@ resource "aws_ecs_task_definition" "streamlit" {
   ])
 }
 
-resource "aws_cloudwatch_log_group" "streamlit-lg" {
-  name = "${local.service_name}-${local.environment}"
+resource "aws_cloudwatch_log_group" "aws-deploy" {
+  name = "${local.project_name}-${local.environment}"
 }
 
-resource "aws_cloudwatch_log_stream" "streamlit-lg-stream" {
-  log_group_name = "${local.service_name}-${local.environment}"
-  name           = "${local.service_name}-${local.environment}"
-  depends_on     = [aws_cloudwatch_log_group.streamlit-lg]
+resource "aws_cloudwatch_log_stream" "aws-deploy" {
+  log_group_name = "${local.project_name}-${local.environment}"
+  name           = "${local.project_name}-${local.environment}"
+  depends_on     = [aws_cloudwatch_log_group.aws-deploy]
 }
