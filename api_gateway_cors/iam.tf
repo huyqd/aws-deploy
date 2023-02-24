@@ -73,3 +73,85 @@ data "aws_iam_policy_document" "read-write" {
   }
 }
 
+resource "aws_iam_role" "sfn_role" {
+  name               = "sfn-role"
+  assume_role_policy = data.aws_iam_policy_document.sfn-assume-role.json
+}
+
+resource "aws_iam_role_policy" "sfn-policy" {
+  policy = data.aws_iam_policy_document.sfn-policy.json
+  role   = aws_iam_role.sfn_role.id
+}
+
+data "aws_iam_policy_document" "sfn-policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "lambda:InvokeFunction",
+      "SNS:Publish"
+    ]
+    resources = [
+      aws_lambda_function.validateDragon.arn,
+      aws_lambda_function.addDragon.arn
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "SNS:Publish"
+    ]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "sfn-assume-role" {
+  statement {
+    sid     = ""
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "states.amazonaws.com",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "gw-role" {
+  name               = "gw-role"
+  assume_role_policy = data.aws_iam_policy_document.gw-assume-role.json
+}
+
+resource "aws_iam_role_policy" "gw-policy" {
+  policy = data.aws_iam_policy_document.gw-policy.json
+  role   = aws_iam_role.gw-role.id
+}
+
+data "aws_iam_policy_document" "gw-policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "states:StartExecution",
+    ]
+    resources = ["*"]
+  }
+
+}
+
+data "aws_iam_policy_document" "gw-assume-role" {
+  statement {
+    sid     = ""
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "apigateway.amazonaws.com",
+      ]
+    }
+  }
+}

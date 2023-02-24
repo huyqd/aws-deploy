@@ -49,87 +49,6 @@ resource "aws_api_gateway_integration_response" "get_integration_response" {
   resource_id = aws_api_gateway_resource.resource.id
   http_method = aws_api_gateway_method.get.http_method
   status_code = aws_api_gateway_method_response.get_response.status_code
-  response_templates = {
-    "application/json" = <<EOF
- [
-    #if( $input.params('family') == "red" )
-       {
-          "description_str":"Xanya is the fire tribe's banished general. She broke ranks and has been wandering ever since.",
-          "dragon_name_str":"Xanya",
-          "family_str":"red",
-          "location_city_str":"las vegas",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"e clark ave",
-          "location_state_str":"nevada"
-       }, {
-          "description_str":"Eislex flies with the fire sprites. He protects them and is their guardian.",
-          "dragon_name_str":"Eislex",
-          "family_str":"red",
-          "location_city_str":"st. cloud",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"breckenridge ave",
-          "location_state_str":"minnesota"      }
-    #elseif( $input.params('family') == "blue" )
-       {
-          "description_str":"Protheus is a wise and ancient dragon that serves on the grand council in the sky world. He uses his power to calm those near him.",
-          "dragon_name_str":"Protheus",
-          "family_str":"blue",
-          "location_city_str":"brandon",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"e morgan st",
-          "location_state_str":"florida"
-       }
-    #elseif( $input.params('dragonName') == "Atlas" )
-       {
-          "description_str":"From the northern fire tribe, Atlas was born from the ashes of his fallen father in combat. He is fearless and does not fear battle.",
-          "dragon_name_str":"Atlas",
-          "family_str":"red",
-          "location_city_str":"anchorage",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"w fireweed ln",
-          "location_state_str":"alaska"
-       }
-    #else
-       {
-          "description_str":"From the northern fire tribe, Atlas was born from the ashes of his fallen father in combat. He is fearless and does not fear battle.",
-          "dragon_name_str":"Atlas",
-          "family_str":"red",
-          "location_city_str":"anchorage",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"w fireweed ln",
-          "location_state_str":"alaska"
-       },
-       {
-          "description_str":"Protheus is a wise and ancient dragon that serves on the grand council in the sky world. He uses his power to calm those near him.",
-          "dragon_name_str":"Protheus",
-          "family_str":"blue",
-          "location_city_str":"brandon",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"e morgan st",
-          "location_state_str":"florida"
-       },
-       {
-          "description_str":"Xanya is the fire tribe's banished general. She broke ranks and has been wandering ever since.",
-          "dragon_name_str":"Xanya",
-          "family_str":"red",
-          "location_city_str":"las vegas",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"e clark ave",
-          "location_state_str":"nevada"
-       },
-       {
-          "description_str":"Eislex flies with the fire sprites. He protects them and is their guardian.",
-          "dragon_name_str":"Eislex",
-          "family_str":"red",
-          "location_city_str":"st. cloud",
-          "location_country_str":"usa",
-          "location_neighborhood_str":"breckenridge ave",
-          "location_state_str":"minnesota"
-       }
-    #end
- ]
-EOF
-  }
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin" = "'*'"
   }
@@ -193,13 +112,34 @@ resource "aws_api_gateway_request_validator" "request_validator" {
 }
 
 resource "aws_api_gateway_integration" "post_integration" {
-  http_method = aws_api_gateway_method.post.http_method
-  resource_id = aws_api_gateway_resource.resource.id
-  rest_api_id = aws_api_gateway_rest_api.aws-deploy.id
-  type        = "MOCK"
+  http_method             = aws_api_gateway_method.post.http_method
+  resource_id             = aws_api_gateway_resource.resource.id
+  rest_api_id             = aws_api_gateway_rest_api.aws-deploy.id
+  integration_http_method = "POST"
+  type                    = "AWS"
+  uri                     = "arn:aws:apigateway:${local.region}:states:action/StartExecution"
+  passthrough_behavior    = "NEVER"
+  credentials             = aws_iam_role.gw-role.arn
+
   request_templates = {
-    "application/json" : <<EOF
-{"statusCode": 200}
+    "application/json" = <<EOF
+#set($data = $input.path('$'))
+
+#set($input = " {
+  ""dragon_name_str"" : ""$data.dragonName"",
+  ""description_str"" : ""$data.description"",
+  ""family_str"" : ""$data.family"",
+  ""location_city_str"" : ""$data.city"",
+  ""location_country_str"" : ""$data.country"",
+  ""location_state_str"" : ""$data.state"",
+  ""location_neighborhood_str"" : ""$data.neighborhood"",
+  ""reportingPhoneNumber"" : ""$data.reportingPhoneNumber"",
+  ""confirmationRequired"" : $data.confirmationRequired}")
+
+{
+    "input": "$util.escapeJavaScript($input).replaceAll("\\'", "'")",
+    "stateMachineArn": "${aws_sfn_state_machine.aws-deploy.arn}"
+}
 EOF
   }
 }
