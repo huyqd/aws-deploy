@@ -42,3 +42,11 @@ data "archive_file" "validateDragon" {
   source_dir  = "python-dragons-lambda/ValidateDragon"
   output_path = "python-dragons-lambda/validateDragon.zip"
 }
+
+resource "aws_lambda_permission" "api-invoke" {
+  principal     = "apigateway.amazonaws.com"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.listDragons.function_name
+  source_arn    = "${aws_api_gateway_rest_api.aws-deploy.execution_arn}/*/*"
+}

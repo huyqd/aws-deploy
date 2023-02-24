@@ -17,3 +17,17 @@ locals {
 resource "aws_s3_bucket" "aws-deploy" {
   bucket = "${local.project_name}-${local.environment}"
 }
+
+resource "aws_ssm_parameter" "bucket" {
+  name      = "dragon_data_bucket_name"
+  type      = "String"
+  value     = aws_s3_bucket.aws-deploy.id
+  overwrite = true
+}
+
+resource "aws_ssm_parameter" "file" {
+  name      = "dragon_data_file_name"
+  type      = "String"
+  value     = "dragon_stats_one.txt"
+  overwrite = true
+}

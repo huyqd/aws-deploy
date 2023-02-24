@@ -22,15 +22,12 @@ resource "aws_api_gateway_method" "get" {
 }
 
 resource "aws_api_gateway_integration" "get_integration" {
-  http_method = aws_api_gateway_method.get.http_method
-  resource_id = aws_api_gateway_resource.resource.id
-  rest_api_id = aws_api_gateway_rest_api.aws-deploy.id
-  type        = "MOCK"
-  request_templates = {
-    "application/json" : <<EOF
-{"statusCode": 200}
-EOF
-  }
+  http_method             = aws_api_gateway_method.get.http_method
+  resource_id             = aws_api_gateway_resource.resource.id
+  rest_api_id             = aws_api_gateway_rest_api.aws-deploy.id
+  integration_http_method = "POST"      // must be POST to invoke lambda
+  type                    = "AWS_PROXY" // for lambda proxy
+  uri                     = aws_lambda_function.listDragons.invoke_arn
 }
 
 
@@ -179,9 +176,9 @@ EOF
 }
 
 resource "aws_api_gateway_method" "post" {
-#  authorization        = "None"
-  authorization = "COGNITO_USER_POOLS"
-  authorizer_id = aws_api_gateway_authorizer.cognito-authorizer.id
+  #  authorization        = "None"
+  authorization        = "COGNITO_USER_POOLS"
+  authorizer_id        = aws_api_gateway_authorizer.cognito-authorizer.id
   http_method          = "POST"
   resource_id          = aws_api_gateway_resource.resource.id
   rest_api_id          = aws_api_gateway_rest_api.aws-deploy.id
