@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamlit
+  labels:
+    app: streamlit
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamlit
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: streamlit
+    spec:
+      containers:
+      - image: bravinwasike/streamlit-app
+        imagePullPolicy: Always
+        name: streamlit
+        ports:
+        - containerPort: 8501
+          protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: streamlit
+spec:
+  type: LoadBalancer
+  selector:
+    app: streamlit
+  ports:
+   -  protocol: TCP
+      port: 80
+      targetPort: 8501
