@@ -5,7 +5,10 @@ resource "aws_eks_cluster" "main" {
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   vpc_config {
-    subnet_ids = concat(aws_subnet.public.*.id, aws_subnet.private.*.id)
+    subnet_ids              = concat(aws_subnet.public.*.id, aws_subnet.private.*.id)
+    public_access_cidrs     = ["0.0.0.0/0"]
+    endpoint_private_access = true
+    endpoint_public_access  = true
   }
 
   timeouts {
@@ -52,18 +55,28 @@ resource "aws_cloudwatch_log_stream" "aws-deploy" {
   depends_on     = [aws_cloudwatch_log_group.aws-deploy]
 }
 
-data "template_file" "kubeconfig" {
-  template = file("${path.module}/templates/kubeconfig.tpl")
-
-  vars = {
-    kubeconfig_name     = "eks_${aws_eks_cluster.main.name}"
-    clustername         = aws_eks_cluster.main.name
-    endpoint            = data.aws_eks_cluster.cluster.endpoint
-    cluster_auth_base64 = data.aws_eks_cluster.cluster.certificate_authority[0].data
-  }
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
 
-resource "local_file" "kubeconfig" {
-  content  = data.template_file.kubeconfig.rendered
-  filename = pathexpand("~/.kube/config")
+
+resource "aws_iam_openid_connect_provider" "oidc_provider" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+
+resource "aws_eks_fargate_profile" "kube-system" {
+  cluster_name           = aws_eks_cluster.main.name
+  fargate_profile_name   = "kube-system"
+  pod_execution_role_arn = aws_iam_role.fargate-pod-execution-role.arn
+
+  # These subnets must have the following resource tag:
+  # kubernetes.io/cluster/<CLUSTER_NAME>.
+  subnet_ids = aws_subnet.private.*.id
+
+  selector {
+    namespace = "kube-system"
+  }
 }

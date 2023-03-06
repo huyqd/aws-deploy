@@ -1,33 +1,28 @@
-data "tls_certificate" "this" {
-  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
-}
-
-resource "aws_iam_openid_connect_provider" "main" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.this.certificates[0].sha1_fingerprint]
-  url             = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
-}
-
-resource "aws_eks_fargate_profile" "main" {
+resource "aws_eks_fargate_profile" "fp-default" {
   cluster_name           = aws_eks_cluster.main.name
   fargate_profile_name   = "fp-default"
   pod_execution_role_arn = aws_iam_role.fargate-pod-execution-role.arn
-  subnet_ids             = aws_subnet.private.*.id
+
+  # These subnets must have the following resource tag:
+  # kubernetes.io/cluster/<CLUSTER_NAME>.
+  subnet_ids = aws_subnet.private.*.id
 
   selector {
-    namespace = "default"
+    namespace = "fp-default"
   }
+}
 
-#  selector {
-#    namespace = "2048-game"
-#  }
+resource "kubernetes_namespace" "fp-default" {
+  metadata {
+    name = "fp-default"
+  }
 }
 
 resource "kubernetes_deployment" "app" {
   metadata {
     name      = "deployment-2048"
-    namespace = "default"
-    labels    = {
+    namespace = "fp-default"
+    labels = {
       app = "2048"
     }
   }
@@ -61,13 +56,13 @@ resource "kubernetes_deployment" "app" {
     }
   }
 
-  depends_on = [aws_eks_fargate_profile.main]
+  depends_on = [aws_eks_fargate_profile.fp-default]
 }
 
 resource "kubernetes_service" "app" {
   metadata {
     name      = "service-2048"
-    namespace = "default"
+    namespace = "fp-default"
   }
   spec {
     selector = {
@@ -80,7 +75,7 @@ resource "kubernetes_service" "app" {
       protocol    = "TCP"
     }
 
-    type = "NodePort"
+    type = "LoadBalancer"
   }
 
   depends_on = [kubernetes_deployment.app]
