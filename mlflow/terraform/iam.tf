@@ -22,8 +22,7 @@ data "aws_iam_policy_document" "service-policy" {
   statement {
     effect = "Allow"
     actions = [
-      "s3:Get*",
-      "s3:List*",
+      "s3:*",
     ]
     resources = ["*"]
   }

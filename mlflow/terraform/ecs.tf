@@ -45,7 +45,7 @@ resource "aws_ecs_task_definition" "aws-deploy" {
   container_definitions = jsonencode([
     {
       name      = local.project_name
-      image     = "${aws_ecr_repository.aws-deploy.repository_url}:${local.service_name}"
+      image     = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/ds:${local.service_name}"
       cpu       = local.cpu
       memory    = local.memory
       essential = true
@@ -77,4 +77,20 @@ resource "aws_cloudwatch_log_stream" "aws-deploy" {
   log_group_name = "${local.project_name}-${local.environment}"
   name           = "${local.project_name}-${local.environment}"
   depends_on     = [aws_cloudwatch_log_group.aws-deploy]
+}
+
+resource "aws_rds_cluster" "backend_store" {
+  cluster_identifier      = local.service_name
+  engine                  = "aurora-mysql"
+  engine_version          = "5.7.mysql_aurora.2.08.3"
+  engine_mode             = "serverless"
+  port                    = local.db_port
+  db_subnet_group_name    = aws_db_subnet_group.rds.name
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  availability_zones      = local.availability_zones
+  master_username         = "admin"
+  master_password         = "password"
+  database_name           = "mlflow"
+  skip_final_snapshot     = true
+  backup_retention_period = 14
 }

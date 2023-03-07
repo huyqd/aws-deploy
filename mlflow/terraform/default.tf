@@ -14,22 +14,10 @@ locals {
   public_subnets_cidr = ["10.1.3.0/24", "10.1.4.0/24"]
   availability_zones  = ["eu-central-1a", "eu-central-1b"]
 
+  db_port          = 3306
   container_port   = 5000
   cpu              = 256
   memory           = 1024
-  healthcheck_path = "/"
+  healthcheck_path = "/health"
   launch_type      = "FARGATE"
-}
-
-resource "aws_s3_bucket" "aws-deploy" {
-  bucket = "${local.project_name}-${local.environment}"
-
-}
-
-resource "aws_ecr_repository" "aws-deploy" {
-  name = local.project_name
-
-  image_scanning_configuration {
-    scan_on_push = false
-  }
 }
