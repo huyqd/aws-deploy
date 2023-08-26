@@ -7,11 +7,13 @@ from sklearn.base import ClassifierMixin
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-
 from zenml import pipeline, step
+from zenml.config import DockerSettings
+
+docker_settings = DockerSettings(replicate_local_python_environment="poetry_export")
 
 
-@step
+@step(enable_cache=False)
 def training_data_loader() -> Tuple[
     Annotated[pd.DataFrame, "X_train"],
     Annotated[pd.DataFrame, "X_test"],
@@ -28,7 +30,7 @@ def training_data_loader() -> Tuple[
     return X_train, X_test, y_train, y_test
 
 
-@step(enable_cache=False)
+@step(enable_cache=False, step_operator="sagemaker", settings={"docker": docker_settings})
 def svc_trainer(
         X_train: pd.DataFrame,
         y_train: pd.Series,
@@ -48,7 +50,7 @@ def svc_trainer(
     return model, train_acc
 
 
-@pipeline
+@pipeline()
 def first_pipeline(gamma: float = 0.002):
     X_train, X_test, y_train, y_test = training_data_loader()
     svc_trainer(gamma=gamma, X_train=X_train, y_train=y_train)
