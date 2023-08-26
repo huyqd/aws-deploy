@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "zenml-aws-deploy"
+version = "0.1.0"
+description = ""
+authors = ["huyqd <quanghuy.dang210@gmail.com>"]
+readme = "README.md"
+packages = [{include = "zenml_aws_deploy"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+zenml = "^0.43.0"
+matplotlib = "^3.7.2"
+scikit-learn = "^1.3.0"
+pandas = "^2.0.3"
+sagemaker = "^2.180.0"
+boto3 = "^1.28.35"
+pyarrow = "^13.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
