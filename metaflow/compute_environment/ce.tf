@@ -25,6 +25,7 @@ resource "aws_launch_template" "cpu" {
       volume_type           = var.volume_type
     }
   }
+}
 */
 
 
