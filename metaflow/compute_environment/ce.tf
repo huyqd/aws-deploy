@@ -1,32 +1,31 @@
-/*
-resource "aws_launch_template" "cpu" {
+#resource "aws_launch_template" "cpu" {
+#
+#  /* To provide a large disk space than the default 8GB for AWS Batch.
+#     AWS Batch points to this using the latest version, so we can update the disk size here
+#     and AWS Batch will use that.
+#
+#     This is used for all Metaflow AWS CPU Batch remote jobs.
+#  */
+#  name = var.name
+#
+#  # Defines what IAM Role to assume to grant an Amazon EC2 instance
+#  # This role must have a policy to access the kms_key_id used to encrypt the EBS volume
+#  iam_instance_profile {
+#    arn = var.iam_instance_profile
+#  }
+#
+#  block_device_mappings {
+#    device_name = "/dev/xvda"
+#
+#    ebs {
+#      volume_size           = var.volume_size
+#      delete_on_termination = true
+#      encrypted             = false
+#      volume_type           = var.volume_type
+#    }
+#  }
+#}
 
-  /* To provide a large disk space than the default 8GB for AWS Batch.
-     AWS Batch points to this using the latest version, so we can update the disk size here
-     and AWS Batch will use that.
-
-     This is used for all Metaflow AWS CPU Batch remote jobs.
-  */
-  name = var.name
-
-  # Defines what IAM Role to assume to grant an Amazon EC2 instance
-  # This role must have a policy to access the kms_key_id used to encrypt the EBS volume
-  iam_instance_profile {
-    arn = var.iam_instance_profile
-  }
-
-  block_device_mappings {
-    device_name = "/dev/xvda"
-
-    ebs {
-      volume_size           = var.volume_size
-      delete_on_termination = true
-      encrypted             = false
-      volume_type           = var.volume_type
-    }
-  }
-}
-*/
 
 
 resource "aws_batch_compute_environment" "batch_ce" {
